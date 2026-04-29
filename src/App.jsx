@@ -54,6 +54,7 @@ const SAMPLE_COMMITMENTS = [
     description: 'Launch v2 API with rate limiting and auth token rotation',
     deadline: '2026-05-02',
     owner: 'Sarah Chen',
+    ownerEmail: 'sarah.chen@lightwork.ai',
     status: 'on_track',
     updates: [{ note: 'Rate limiting merged to main, auth rotation 80% done', ts: new Date(Date.now() - 2 * 86400000).toISOString() }],
     createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
@@ -64,6 +65,7 @@ const SAMPLE_COMMITMENTS = [
     description: 'Complete user research interviews for onboarding redesign (10 sessions)',
     deadline: '2026-04-30',
     owner: 'Marcus Webb',
+    ownerEmail: 'marcus.webb@lightwork.ai',
     status: 'at_risk',
     updates: [{ note: 'Only 6 of 10 interviews scheduled — 2 no-shows this week', ts: new Date(Date.now() - 1 * 86400000).toISOString() }],
     createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
@@ -74,6 +76,7 @@ const SAMPLE_COMMITMENTS = [
     description: 'Close Series A lead investor term sheet',
     deadline: '2026-05-15',
     owner: 'Priya Nair',
+    ownerEmail: 'priya.nair@lightwork.ai',
     status: 'on_track',
     updates: [{ note: 'Second partner meeting confirmed for Friday', ts: new Date(Date.now() - 3 * 86400000).toISOString() }],
     createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
@@ -84,6 +87,7 @@ const SAMPLE_COMMITMENTS = [
     description: 'Implement payroll system and onboard first 3 FTE employees',
     deadline: '2026-04-25',
     owner: 'James Okafor',
+    ownerEmail: 'james.okafor@lightwork.ai',
     status: 'missed',
     updates: [{ note: 'Payroll vendor integration delayed — waiting on bank KYC docs', ts: new Date(Date.now() - 6 * 86400000).toISOString() }],
     createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
@@ -94,6 +98,7 @@ const SAMPLE_COMMITMENTS = [
     description: 'Set up CI/CD pipeline with automated test coverage reporting',
     deadline: '2026-04-20',
     owner: 'Sarah Chen',
+    ownerEmail: 'sarah.chen@lightwork.ai',
     status: 'completed',
     updates: [{ note: 'Pipeline live, coverage at 74%. All green.', ts: new Date(Date.now() - 8 * 86400000).toISOString() }],
     createdAt: new Date(Date.now() - 25 * 86400000).toISOString(),
@@ -104,6 +109,7 @@ const SAMPLE_COMMITMENTS = [
     description: 'Ship mobile-responsive dashboard MVP to beta users',
     deadline: '2026-05-05',
     owner: 'Lena Park',
+    ownerEmail: 'lena.park@lightwork.ai',
     status: 'on_track',
     updates: [],
     createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
@@ -244,6 +250,7 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate, onDelete, onE
     description: commitment.description,
     deadline: commitment.deadline,
     owner: commitment.owner,
+    ownerEmail: commitment.ownerEmail || '',
   })
 
   const lastUpdate = commitment.updates[commitment.updates.length - 1]
@@ -264,6 +271,7 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate, onDelete, onE
       description: editForm.description.trim(),
       deadline: editForm.deadline,
       owner: editForm.owner.trim(),
+      ownerEmail: editForm.ownerEmail.trim(),
     })
     setIsEditing(false)
   }
@@ -274,8 +282,29 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate, onDelete, onE
       description: commitment.description,
       deadline: commitment.deadline,
       owner: commitment.owner,
+      ownerEmail: commitment.ownerEmail || '',
     })
     setIsEditing(false)
+  }
+
+  function handleNudge() {
+    const subject = encodeURIComponent(`Update needed: ${commitment.description}`)
+    const body = encodeURIComponent(
+`Hi ${commitment.owner},
+
+This is a reminder that the following deliverable needs an update:
+
+Deliverable: ${commitment.description}
+Team: ${commitment.team}
+Deadline: ${fmtDate(commitment.deadline)}
+Current status: ${STATUS[commitment.status].label}
+
+Could you provide a quick status update?
+
+Thanks,
+LightWork Operations Hub`
+    )
+    window.location.href = `mailto:${commitment.ownerEmail}?subject=${subject}&body=${body}`
   }
 
   const s = STATUS[commitment.status]
@@ -316,15 +345,27 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate, onDelete, onE
               />
             </div>
           </div>
-          <div className="card-edit-field">
-            <label className="card-edit-label">Owner</label>
-            <input
-              type="text"
-              className="card-edit-input"
-              placeholder="Full name"
-              value={editForm.owner}
-              onChange={e => setEditForm(f => ({ ...f, owner: e.target.value }))}
-            />
+          <div className="card-edit-row">
+            <div className="card-edit-field">
+              <label className="card-edit-label">Owner</label>
+              <input
+                type="text"
+                className="card-edit-input"
+                placeholder="Full name"
+                value={editForm.owner}
+                onChange={e => setEditForm(f => ({ ...f, owner: e.target.value }))}
+              />
+            </div>
+            <div className="card-edit-field">
+              <label className="card-edit-label">Owner Email</label>
+              <input
+                type="email"
+                className="card-edit-input"
+                placeholder="email@company.com"
+                value={editForm.ownerEmail}
+                onChange={e => setEditForm(f => ({ ...f, ownerEmail: e.target.value }))}
+              />
+            </div>
           </div>
           <div className="card-edit-actions">
             <button onClick={handleCancelEdit} className="btn-cancel">Cancel</button>
@@ -352,6 +393,16 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate, onDelete, onE
         <div className="card-header-right">
           <StatusBadge status={commitment.status} />
           <div className="card-icon-btns">
+            <button
+              className={`card-icon-btn card-icon-btn-nudge${!commitment.ownerEmail ? ' card-icon-btn-disabled' : ''}`}
+              onClick={commitment.ownerEmail ? handleNudge : undefined}
+              title={commitment.ownerEmail ? 'Nudge owner' : 'No email set'}
+              disabled={!commitment.ownerEmail}
+            >
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </button>
             <button
               className="card-icon-btn card-icon-btn-edit"
               onClick={() => setIsEditing(true)}
@@ -450,7 +501,7 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate, onDelete, onE
 // ─── Add Commitment Modal ─────────────────────────────────────────────────────
 
 function AddCommitmentModal({ onClose, onAdd }) {
-  const [form, setForm] = useState({ team: 'Engineering', description: '', deadline: '', owner: '' })
+  const [form, setForm] = useState({ team: 'Engineering', description: '', deadline: '', owner: '', ownerEmail: '' })
   const [error, setError] = useState('')
 
   function handleSubmit(e) {
@@ -527,6 +578,16 @@ function AddCommitmentModal({ onClose, onAdd }) {
                   onChange={e => setForm(f => ({ ...f, owner: e.target.value }))}
                 />
               </div>
+            </div>
+            <div className="form-field">
+              <label className="form-label">Owner Email <span className="form-label-optional">(optional)</span></label>
+              <input
+                type="email"
+                className="form-input"
+                placeholder="owner@company.com"
+                value={form.ownerEmail}
+                onChange={e => setForm(f => ({ ...f, ownerEmail: e.target.value }))}
+              />
             </div>
             {error && <p className="form-error">{error}</p>}
             <div className="modal-actions">

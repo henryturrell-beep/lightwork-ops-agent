@@ -1116,3 +1116,15 @@ body {
 }
 .card-edit-actions .btn-cancel  { flex: 1; padding: 0.4375rem 0.75rem; font-size: 0.8125rem; }
 .card-edit-actions .btn-submit  { flex: 1; padding: 0.4375rem 0.75rem; font-size: 0.8125rem; }
+
+/* ─── Nudge button & optional form label ───────────────────────────────────── */
+
+.card-icon-btn-nudge:hover         { background: #fefce8; color: #ca8a04; }
+.card-icon-btn-disabled            { opacity: 0.35; cursor: not-allowed !important; }
+.card-icon-btn-disabled:hover      { background: transparent !important; color: #d1d5db !important; }
+
+.form-label-optional {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #9ca3af;
+}
