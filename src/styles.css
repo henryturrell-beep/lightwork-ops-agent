@@ -979,3 +979,140 @@ body {
   color: #6b7280;
   margin: 0;
 }
+
+/* ─── Card Header Right (status badge + icon buttons) ─────────────────────── */
+
+.card-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.card-icon-btns {
+  display: flex;
+  gap: 0.125rem;
+}
+
+.card-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #d1d5db;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.card-icon-btn-edit:hover  { background: #eff6ff; color: #2B7DE9; }
+.card-icon-btn-delete:hover { background: #fef2f2; color: #ef4444; }
+
+/* ─── Delete Confirmation Strip ────────────────────────────────────────────── */
+
+.card-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.card-delete-msg {
+  font-size: 0.8125rem;
+  color: #b91c1c;
+  font-weight: 500;
+  flex: 1;
+}
+
+.btn-delete-confirm {
+  font-size: 0.75rem;
+  padding: 0.3125rem 0.625rem;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background-color 0.15s;
+}
+.btn-delete-confirm:hover { background: #dc2626; }
+
+.btn-delete-cancel {
+  font-size: 0.75rem;
+  padding: 0.3125rem 0.625rem;
+  background: #fff;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.15s;
+}
+.btn-delete-cancel:hover { background: #f9fafb; }
+
+/* ─── Inline Edit Form ─────────────────────────────────────────────────────── */
+
+.card-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.card-edit-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.card-edit-textarea,
+.card-edit-input,
+.card-edit-select {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.875rem;
+  outline: none;
+  font-family: inherit;
+  background: #fff;
+  color: #111827;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.card-edit-textarea:focus,
+.card-edit-input:focus,
+.card-edit-select:focus {
+  border-color: #2B7DE9;
+  box-shadow: 0 0 0 3px rgba(43, 125, 233, 0.1);
+}
+.card-edit-textarea { resize: none; }
+
+.card-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.card-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+.card-edit-actions .btn-cancel  { flex: 1; padding: 0.4375rem 0.75rem; font-size: 0.8125rem; }
+.card-edit-actions .btn-submit  { flex: 1; padding: 0.4375rem 0.75rem; font-size: 0.8125rem; }

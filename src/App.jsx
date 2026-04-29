@@ -233,10 +233,18 @@ function DeadlinePill({ deadline, status }) {
 
 // ─── Commitment Card ──────────────────────────────────────────────────────────
 
-function CommitmentCard({ commitment, onStatusChange, onAddUpdate }) {
+function CommitmentCard({ commitment, onStatusChange, onAddUpdate, onDelete, onEdit }) {
   const [updateText, setUpdateText] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [showNoteInput, setShowNoteInput] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    team: commitment.team,
+    description: commitment.description,
+    deadline: commitment.deadline,
+    owner: commitment.owner,
+  })
 
   const lastUpdate = commitment.updates[commitment.updates.length - 1]
   const stale = commitment.status !== 'completed' && daysSince(lastUpdate?.ts) > 5
@@ -249,8 +257,85 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate }) {
     setShowNoteInput(false)
   }
 
+  function handleSaveEdit() {
+    if (!editForm.description.trim() || !editForm.deadline || !editForm.owner.trim()) return
+    onEdit(commitment.id, {
+      team: editForm.team,
+      description: editForm.description.trim(),
+      deadline: editForm.deadline,
+      owner: editForm.owner.trim(),
+    })
+    setIsEditing(false)
+  }
+
+  function handleCancelEdit() {
+    setEditForm({
+      team: commitment.team,
+      description: commitment.description,
+      deadline: commitment.deadline,
+      owner: commitment.owner,
+    })
+    setIsEditing(false)
+  }
+
   const s = STATUS[commitment.status]
 
+  // ── Inline edit mode ──────────────────────────────────────────────────────
+  if (isEditing) {
+    return (
+      <div className={`commitment-card ${s.cardBorder}`}>
+        <div className="card-edit-form">
+          <div className="card-edit-field">
+            <label className="card-edit-label">Deliverable</label>
+            <textarea
+              autoFocus
+              className="card-edit-textarea"
+              rows={3}
+              value={editForm.description}
+              onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+            />
+          </div>
+          <div className="card-edit-row">
+            <div className="card-edit-field">
+              <label className="card-edit-label">Team</label>
+              <select
+                className="card-edit-select"
+                value={editForm.team}
+                onChange={e => setEditForm(f => ({ ...f, team: e.target.value }))}
+              >
+                {TEAMS.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="card-edit-field">
+              <label className="card-edit-label">Deadline</label>
+              <input
+                type="date"
+                className="card-edit-input"
+                value={editForm.deadline}
+                onChange={e => setEditForm(f => ({ ...f, deadline: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="card-edit-field">
+            <label className="card-edit-label">Owner</label>
+            <input
+              type="text"
+              className="card-edit-input"
+              placeholder="Full name"
+              value={editForm.owner}
+              onChange={e => setEditForm(f => ({ ...f, owner: e.target.value }))}
+            />
+          </div>
+          <div className="card-edit-actions">
+            <button onClick={handleCancelEdit} className="btn-cancel">Cancel</button>
+            <button onClick={handleSaveEdit} className="btn-submit">Save changes</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Normal view ───────────────────────────────────────────────────────────
   return (
     <div className={`commitment-card ${s.cardBorder}`}>
       <div className="card-header">
@@ -264,7 +349,29 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate }) {
             <span className="card-owner">{commitment.owner}</span>
           </div>
         </div>
-        <StatusBadge status={commitment.status} />
+        <div className="card-header-right">
+          <StatusBadge status={commitment.status} />
+          <div className="card-icon-btns">
+            <button
+              className="card-icon-btn card-icon-btn-edit"
+              onClick={() => setIsEditing(true)}
+              title="Edit commitment"
+            >
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3a2 2 0 01.586-1.414z" />
+              </svg>
+            </button>
+            <button
+              className="card-icon-btn card-icon-btn-delete"
+              onClick={() => setConfirmDelete(true)}
+              title="Delete commitment"
+            >
+              <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       <DeadlinePill deadline={commitment.deadline} status={commitment.status} />
@@ -326,6 +433,14 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate }) {
               {u.note} <span className="history-time">· {fmtTs(u.ts)}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="card-delete-confirm">
+          <span className="card-delete-msg">Delete this commitment?</span>
+          <button onClick={() => onDelete(commitment.id)} className="btn-delete-confirm">Yes, delete</button>
+          <button onClick={() => setConfirmDelete(false)} className="btn-delete-cancel">Cancel</button>
         </div>
       )}
     </div>
@@ -820,6 +935,22 @@ export default function App() {
     })
   }, [])
 
+  const handleDelete = useCallback(id => {
+    setCommitments(prev => {
+      const next = prev.filter(c => c.id !== id)
+      saveData(next).catch(err => console.error('[LW] Save failed:', err))
+      return next
+    })
+  }, [])
+
+  const handleEdit = useCallback((id, fields) => {
+    setCommitments(prev => {
+      const next = prev.map(c => c.id === id ? { ...c, ...fields } : c)
+      saveData(next).catch(err => console.error('[LW] Save failed:', err))
+      return next
+    })
+  }, [])
+
   if (isLoading) {
     return (
       <div className="app-loading">
@@ -991,6 +1122,8 @@ export default function App() {
                 commitment={c}
                 onStatusChange={handleStatusChange}
                 onAddUpdate={handleAddUpdate}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
               />
             ))}
           </div>
