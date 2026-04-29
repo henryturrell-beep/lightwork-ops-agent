@@ -45,76 +45,6 @@ function fmtTs(iso) {
   return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-// ─── Sample Data ─────────────────────────────────────────────────────────────
-
-const SAMPLE_COMMITMENTS = [
-  {
-    id: 'c1',
-    team: 'Engineering',
-    description: 'Launch v2 API with rate limiting and auth token rotation',
-    deadline: '2026-05-02',
-    owner: 'Sarah Chen',
-    ownerEmail: 'sarah.chen@lightwork.ai',
-    status: 'on_track',
-    updates: [{ note: 'Rate limiting merged to main, auth rotation 80% done', ts: new Date(Date.now() - 2 * 86400000).toISOString() }],
-    createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
-  },
-  {
-    id: 'c2',
-    team: 'Product',
-    description: 'Complete user research interviews for onboarding redesign (10 sessions)',
-    deadline: '2026-04-30',
-    owner: 'Marcus Webb',
-    ownerEmail: 'marcus.webb@lightwork.ai',
-    status: 'at_risk',
-    updates: [{ note: 'Only 6 of 10 interviews scheduled — 2 no-shows this week', ts: new Date(Date.now() - 1 * 86400000).toISOString() }],
-    createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-  },
-  {
-    id: 'c3',
-    team: 'Commercial',
-    description: 'Close Series A lead investor term sheet',
-    deadline: '2026-05-15',
-    owner: 'Priya Nair',
-    ownerEmail: 'priya.nair@lightwork.ai',
-    status: 'on_track',
-    updates: [{ note: 'Second partner meeting confirmed for Friday', ts: new Date(Date.now() - 3 * 86400000).toISOString() }],
-    createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
-  },
-  {
-    id: 'c4',
-    team: 'Operations',
-    description: 'Implement payroll system and onboard first 3 FTE employees',
-    deadline: '2026-04-25',
-    owner: 'James Okafor',
-    ownerEmail: 'james.okafor@lightwork.ai',
-    status: 'missed',
-    updates: [{ note: 'Payroll vendor integration delayed — waiting on bank KYC docs', ts: new Date(Date.now() - 6 * 86400000).toISOString() }],
-    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
-  },
-  {
-    id: 'c5',
-    team: 'Engineering',
-    description: 'Set up CI/CD pipeline with automated test coverage reporting',
-    deadline: '2026-04-20',
-    owner: 'Sarah Chen',
-    ownerEmail: 'sarah.chen@lightwork.ai',
-    status: 'completed',
-    updates: [{ note: 'Pipeline live, coverage at 74%. All green.', ts: new Date(Date.now() - 8 * 86400000).toISOString() }],
-    createdAt: new Date(Date.now() - 25 * 86400000).toISOString(),
-  },
-  {
-    id: 'c6',
-    team: 'Product',
-    description: 'Ship mobile-responsive dashboard MVP to beta users',
-    deadline: '2026-05-05',
-    owner: 'Lena Park',
-    ownerEmail: 'lena.park@lightwork.ai',
-    status: 'on_track',
-    updates: [],
-    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-  },
-]
 
 // ─── Markdown utilities ───────────────────────────────────────────────────────
 
@@ -287,9 +217,10 @@ function CommitmentCard({ commitment, onStatusChange, onAddUpdate, onDelete, onE
     setIsEditing(false)
   }
 
+  const [nudgeFallback, setNudgeFallback] = useState(false)
+
   function handleNudge() {
-    const subject = encodeURIComponent(`Update needed: ${commitment.description}`)
-    const body = encodeURIComponent(
+    const plainBody =
 `Hi ${commitment.owner},
 
 This is a reminder that the following deliverable needs an update:
@@ -303,8 +234,17 @@ Could you provide a quick status update?
 
 Thanks,
 LightWork Operations Hub`
-    )
-    window.location.href = `mailto:${commitment.ownerEmail}?subject=${subject}&body=${body}`
+
+    const subject = encodeURIComponent(`Update needed: ${commitment.description}`)
+    const mailto = `mailto:${commitment.ownerEmail}?subject=${subject}&body=${encodeURIComponent(plainBody)}`
+
+    // Attempt to open the mail client
+    window.location.href = mailto
+
+    // If the browser didn't hand off to a mail client within 2s, show fallback
+    const timer = setTimeout(() => setNudgeFallback(plainBody), 2000)
+    // Clean up timer if the page unloads (mail client opened successfully)
+    window.addEventListener('blur', () => clearTimeout(timer), { once: true })
   }
 
   const s = STATUS[commitment.status]
@@ -494,6 +434,81 @@ LightWork Operations Hub`
           <button onClick={() => setConfirmDelete(false)} className="btn-delete-cancel">Cancel</button>
         </div>
       )}
+
+      {nudgeFallback && (
+        <NudgeMailtoModal
+          to={commitment.ownerEmail}
+          subject={`Update needed: ${commitment.description}`}
+          body={nudgeFallback}
+          onClose={() => setNudgeFallback(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Nudge Fallback Modal ─────────────────────────────────────────────────────
+
+function NudgeMailtoModal({ to, subject, body, onClose }) {
+  const [copyLabel, setCopyLabel] = useState('Copy email content')
+
+  function handleCopy() {
+    const text = `To: ${to}\nSubject: ${subject}\n\n${body}`
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyLabel('Copied!')
+      setTimeout(() => setCopyLabel('Copy email content'), 2000)
+    })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div>
+            <h2 className="modal-title">Email client didn't open?</h2>
+            <p className="modal-subtitle">Copy the content below and paste it into your email manually.</p>
+          </div>
+          <button onClick={onClose} className="modal-close">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="nudge-preview">
+            <div className="nudge-preview-row">
+              <span className="nudge-preview-label">To</span>
+              <span className="nudge-preview-value">{to}</span>
+            </div>
+            <div className="nudge-preview-row">
+              <span className="nudge-preview-label">Subject</span>
+              <span className="nudge-preview-value">{subject}</span>
+            </div>
+            <div className="nudge-preview-row nudge-preview-body-row">
+              <span className="nudge-preview-label">Body</span>
+              <pre className="nudge-preview-body">{body}</pre>
+            </div>
+          </div>
+          <div className="modal-actions" style={{ marginTop: '1rem' }}>
+            <button onClick={onClose} className="btn-cancel">Close</button>
+            <button
+              onClick={handleCopy}
+              className={`btn-submit${copyLabel === 'Copied!' ? ' btn-copied' : ''}`}
+            >
+              {copyLabel === 'Copied!' ? (
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              )}
+              {copyLabel}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -941,11 +956,11 @@ export default function App() {
     loadData()
       .then(data => {
         console.log('[LW] Loaded from JSONBin:', data.length, 'commitments')
-        setCommitments(data.length > 0 ? data : SAMPLE_COMMITMENTS)
+        setCommitments(data)
       })
       .catch(err => {
-        console.error('[LW] JSONBin load failed, falling back to sample data:', err)
-        setCommitments(SAMPLE_COMMITMENTS)
+        console.error('[LW] JSONBin load failed:', err)
+        setCommitments([])
       })
       .finally(() => setIsLoading(false))
   }, [])
@@ -1167,13 +1182,19 @@ export default function App() {
             <svg className="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            <p className="empty-text">No commitments match your filters.</p>
-            <button
-              onClick={() => { setFilterTeam('All'); setFilterStatus('All') }}
-              className="btn-clear-filters"
-            >
-              Clear filters
-            </button>
+            {commitments.length === 0 ? (
+              <p className="empty-text">No commitments yet — add one to get started.</p>
+            ) : (
+              <>
+                <p className="empty-text">No commitments match your filters.</p>
+                <button
+                  onClick={() => { setFilterTeam('All'); setFilterStatus('All') }}
+                  className="btn-clear-filters"
+                >
+                  Clear filters
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="commitments-grid">
